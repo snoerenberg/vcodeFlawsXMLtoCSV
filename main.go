@@ -9,6 +9,7 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
+	"github.com/360EntSecGroup-Skylar/excelize"
 )
 
 // Flaw represents a finding from a Veracode scan
@@ -42,6 +43,7 @@ func main() {
 	inputXML := flag.String("xml", "", "Input XML file that should be converted to CSV.")
 	flag.Parse()
 
+
 	// Read the XML file
 	if xmlFile, err = ioutil.ReadFile(*inputXML); err != nil {
 		log.Fatal(err)
@@ -67,6 +69,14 @@ func main() {
 	if err = writer.Write(headers); err != nil {
 		log.Fatal(err)
 	}
+
+
+	xlsx := excelize.NewFile()
+	xlsx.SetSheetRow("Sheet1", "A1", &headers)
+	//err = xlsx.AutoFilter("Sheet1", "A1", "P1", "")
+
+
+
 
 	// Create a new decoder from the XML file
 	decoder := xml.NewDecoder(bytes.NewReader(xmlFile))
@@ -105,9 +115,22 @@ func main() {
 				if err != nil {
 					log.Fatal(err)
 				}
+
+				xlsx.SetSheetRow("Sheet1", fmt.Sprintf("%s%d", "A", flawCount+2), &entry)
+
 				flawCount++
 			}
 		}
 	}
+
+	xlsx.AddTable("Sheet1", "A1", fmt.Sprintf("%s%d", "P", flawCount+1), `{"table_name":"table","table_style":"TableStyleMedium2", "show_first_column":true,"show_last_column":true,"show_row_stripes":false,"show_column_stripes":true}`)
+
+	// Save xlsx file by the given path.
+	err2 := xlsx.SaveAs(*inputXML + ".xlsx")
+
+	if err2 != nil {
+		fmt.Println(err2)
+	}
+
 	fmt.Printf("Created %v with %v flaws \n", *inputXML+".csv", flawCount)
 }
